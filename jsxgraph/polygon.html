@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Type Script Greeter</title>
+    <link rel="stylesheet" type="text/css" href="http://jsxgraph.uni-bayreuth.de/distrib/jsxgraph.css" />
+    <script type="text/javascript" src="http://jsxgraph.uni-bayreuth.de/distrib/jsxgraphcore.js"></script>
+</head>
+
+<body>
+    <div id="board" class="jxgbox" style="width:500px; height:500px;"></div>
+    <script type="text/javascript">
+        var board = JXG.JSXGraph.initBoard(
+            "board",
+            {
+                boundingbox: [-10, 10, 10, -10],
+                axis: true
+            }
+        );
+        var p1 = board.create("point", [2.5, 2.5], { name: "X", size: 4 });
+        var p2 = board.create("point", [2.5, -2.5], { name: "Y", size: 4 });
+        var p3 = board.create("point", [-5, 0], { name: "Z", size: 4 });
+        var triangle = board.create("polygon", ["Z", "Y", "X"]);
+    </script>
+</body>
+
+</html>
