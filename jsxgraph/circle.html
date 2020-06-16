@@ -17,15 +17,12 @@
             }
         );
 
-        var p1 = b.create("point", [-1, 1], { name: "A", size: 4 });
-        var p2 = b.create("point", [2, -1], { name: "B", size: 4 });
-        var li = b.create("line", ["A", "B"], { strokeColor: "#00ff00", strokeWidth: 2 });
-
-        var p3 = b.create("point", [5, 1], { name: "C", size: 4 });
-        var p4 = b.create("point", [0, -7], { name: "D", size: 4 });
-        var sg = b.create("line", [p3, p4], { straightFirst: false, straightLast: false, strokeWidth: 2, dash: 2 })
-        var begin = [-3, -1], end = [-5, -1];
-        var li3 = b.create('line', [begin, end], { straightFirst: false, straightLast: false, strokeWidth: 2 });
+        var origin1 = b.create("point", [0, 0], { name: "center1", size: 4, face: "o" });
+        var r1 = b.create("point", [2, -1], { name: "R1", size: 4, face: "o" });
+        var c1 = b.create("circle", ["center1", "R1"], { strokeColor: "green", strokeWidth: 2 });
+        var origin2 = b.create("point", [-1, 0], { name: "center2", size: 4, face: "o" });
+        var r2 = b.create("point", [5, -1], { name: "R2", size: 4, face: "o" });
+        var c2 = b.create("circle", ["center2", "R2"], { strokeColor: "green", strokeWidth: 2 });
     </script>
 </body>
 
