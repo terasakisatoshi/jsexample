@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Type Script Greeter</title>
+    <link rel="stylesheet" type="text/css" href="http://jsxgraph.uni-bayreuth.de/distrib/jsxgraph.css" />
+    <script type="text/javascript" src="http://jsxgraph.uni-bayreuth.de/distrib/jsxgraphcore.js"></script>
+</head>
+
+<body>
+    <div id="line" class="jxgbox" style="width:500px; height:500px;"></div>
+    <script type="text/javascript">
+        var b = JXG.JSXGraph.initBoard(
+            "line",
+            {
+                boundingbox: [-10, 10, 10, -10], axis: true
+            }
+        );
+
+        var p1 = b.create("point", [-1, 1], { name: "A", size: 4 });
+        var p2 = b.create("point", [2, -1], { name: "B", size: 4 });
+        var li = b.create("line", ["A", "B"], { strokeColor: "#00ff00", strokeWidth: 2 });
+
+        var p3 = b.create("point", [5, 1], { name: "C", size: 4 });
+        var p4 = b.create("point", [0, -7], { name: "D", size: 4 });
+        var sg = b.create("line", [p3, p4], { straightFirst: false, straightLast: false, strokeWidth: 2, dash: 2 })
+        var begin = [-3, -1], end = [-5, -1];
+        var li3 = b.create('line', [begin, end], { straightFirst: false, straightLast: false, strokeWidth: 2 });
+    </script>
+</body>
+
+</html>
