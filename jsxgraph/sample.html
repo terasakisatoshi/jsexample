@@ -8,9 +8,56 @@
 </head>
 
 <body>
-    <div id="box" class="jxgbox" style="width:500px; height:500px;"></div>
+    <div id="box" class="jxgbox" style="width:400px; height:400px;"></div>
     <script type="text/javascript">
-        var board = JXG.JSXGraph.initBoard('box', { boundingbox: [-10, 10, 10, -10], axis: true });
+        var xmin = -2, xmax = 6, ymin = -4, ymax = 4;
+        var boardBox = JXG.JSXGraph.initBoard(
+            "box",
+            {
+                boundingbox: [xmin, ymax, xmax, ymin],
+                axis: true,
+                grid: true,
+            }
+        );
+    </script>
+    <div id="point" class="jxgbox" style="width:400px; height:400px;"></div>
+    <script type="text/javascript">
+        var xmin = -2, xmax = 6, ymin = -4, ymax = 4;
+        var boardPt = JXG.JSXGraph.initBoard(
+            "point",
+            {
+                boundingbox: [xmin, ymax, xmax, ymin],
+                axis: true,
+                grid: true,
+            }
+        );
+        var px = 1, py = 2
+        var p = boardPt.create(
+            "point", [px, py],
+        );
+    </script>
+    <div id="multiple-pts" class="jxgbox" style="width:400px; height:400px;"></div>
+    <script type="text/javascript">
+        var xmin = -2, xmax = 6, ymin = -4, ymax = 4;
+        var boardPt = JXG.JSXGraph.initBoard(
+            "multiple-pts",
+            {
+                boundingbox: [xmin, ymax, xmax, ymin],
+                axis: true,
+                grid: true,
+            }
+        );
+        var b3a = JXG.JSXGraph.initBoard("multiple-pts",
+            { boundingbox: [-1, 2.5, 14, -2.5] });
+        b3a.create("point", [1, 0], { face: 'o' });  // or circle
+        b3a.create("point", [2, 0], { face: '[]' }); // or square
+        b3a.create("point", [3, 0], { face: 'x' });  // or cross
+        b3a.create("point", [4, 0], { face: '+' });  // or plus
+        b3a.create("point", [5, 0], { face: '^' });  // or triangleUp
+        b3a.create("point", [6, 0], { face: 'v' });  // or triangleDown
+        b3a.create("point", [7, 0], { face: '>' });  // or triangleLeft
+        b3a.create("point", [8, 0], { face: '<' });  // or triangleRight
+        b3a.create("point", [9, 0], { face: '<>' }); // or diamond
     </script>
 </body>
 
