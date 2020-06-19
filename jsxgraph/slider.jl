@@ -11,3 +11,4 @@ c = slider("c", [[8, 5], [12, 5], [-10, -5, 2]])
 
 brd ++ plot(f)
 brd.style="width:500px;height:500px;margin:0 auto;"
+show(brd)
