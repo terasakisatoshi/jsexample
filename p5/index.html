@@ -1,0 +1,23 @@
+<html>
+  <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.6.0/p5.js"></script>
+  </head>
+  <body>
+    <div id="container", class=".container"></div>
+    <script>
+      function sketch(s){
+        s.setup=(function (){return s.createCanvas(640,480)}); 
+        s.draw=(function draw() {
+          if (s.mouseIsPressed) {
+            s.fill(0);
+          } else {
+            s.fill(255);
+          }
+          s.ellipse(s.mouseX, s.mouseY, 80, 80);
+        });
+        return s;
+      };
+      new p5(sketch);
+    </script>
+  </body>
+</html>

@@ -10,13 +10,9 @@
 <body>
     <div id="board" class="jxgbox" style="width:500px; height:500px;"></div>
     <script type="text/javascript">
-        var board = JXG.JSXGraph.initBoard(
-            "board",
-            {
-                boundingbox: [-10, 10, 10, -10],
-                axis: true
-            }
-        );
+        (function(){
+            let board=JXG.JSXGraph.initBoard("board",{boundingbox:[-15,10,15,-15],axis:true});
+        })();
     </script>
 </body>
 
