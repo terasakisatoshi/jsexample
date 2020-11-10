@@ -102,3 +102,7 @@ dist
 
 # TernJS port file
 .tern-port
+
+# Regarding to Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
