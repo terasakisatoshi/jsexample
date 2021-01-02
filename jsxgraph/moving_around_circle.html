@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Type Script Greeter</title>
+    <link rel="stylesheet" type="text/css" href="http://jsxgraph.uni-bayreuth.de/distrib/jsxgraph.css" />
+    <script type="text/javascript" src="http://jsxgraph.uni-bayreuth.de/distrib/jsxgraphcore.js"></script>
+</head>
+
+<body>
+    <div id="board" class="jxgbox" style="width:500px; height:500px;"></div>
+    <script type="text/javascript">
+        (function () {
+            let board = JXG.JSXGraph.initBoard(
+                "board",
+                {
+                    boundingbox: [-10, 10, 10, -10],
+                    keepaspectratio: true,
+                    axis: true,
+                    grid: false
+                }
+            );
+            var r = 3.0;
+            function c(theta) {
+                return [r * Math.cos(theta), r * Math.sin(theta)];
+            }
+            var thetaInit = 0
+            var circle = board.create(
+                "circle",
+                [[0, 0], r],
+                {
+                    dash: 2,
+                    fixed: true,
+                }
+            );
+            var point = board.create(
+                "glider",
+                [...c(thetaInit), circle]
+            );
+            function startAnimation(thetaInit) {
+                var duration = 3 * 1e3 // [sec]
+                point.moveAlong(function () {
+                    return function (t) {
+                        if (t >= duration) {
+                            return NaN;
+                        }
+                        return c(2 * Math.PI * t / duration + thetaInit);
+                    };
+                }())
+            }
+            var isInDragMode = false;
+            function hook() {
+                if (!isInDragMode && board.mode === board.BOARD_MODE_DRAG) {
+                    board.stopAllAnimation();
+                    isInDragMode = !isInDragMode;
+                }
+
+                if (isInDragMode && board.mode !== board.BOARD_MODE_DRAG) {
+                    isInDragMode = !isInDragMode;
+                    startAnimation(Math.asin(point.Y() / r));
+                }
+            }
+            board.addHook(hook);
+            startAnimation(thetaInit);
+        })();
+    </script>
+</body>
+
+</html>

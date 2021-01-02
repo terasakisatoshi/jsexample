@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Type Script Greeter</title>
+    <link rel="stylesheet" type="text/css" href="http://jsxgraph.uni-bayreuth.de/distrib/jsxgraph.css" />
+    <script type="text/javascript" src="http://jsxgraph.uni-bayreuth.de/distrib/jsxgraphcore.js"></script>
+</head>
+
+<body>
+    <div id="board" class="jxgbox" style="width:500px; height:500px;"></div>
+    <script type="text/javascript">
+        (function () {
+            let board = JXG.JSXGraph.initBoard(
+                "board",
+                {
+                    boundingbox: [-10, 10, 10, -10],
+                    keepaspectratio: true,
+                    axis: true,
+                    grid: false
+                }
+            );
+            let r = 3.0,
+                n = 10;
+            board.create("circle", [[0, 0], r]);
+            for (let k = 0; k < n; k++) {
+                theta = k / n * (2 * Math.PI);
+                board.create(
+                    "point",
+                    [r * Math.cos(theta), r * Math.sin(theta)],
+                    { name: '' },
+                );
+            }
+
+        })();
+    </script>
+</body>
+
+</html>
