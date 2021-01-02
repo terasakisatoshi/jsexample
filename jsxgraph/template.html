@@ -11,7 +11,15 @@
     <div id="board" class="jxgbox" style="width:500px; height:500px;"></div>
     <script type="text/javascript">
         (function(){
-            let board=JXG.JSXGraph.initBoard("board",{boundingbox:[-15,10,15,-15],axis:true});
+            let board = JXG.JSXGraph.initBoard(
+                "board",
+                {
+                    boundingbox: [-10, 10, 10, -10],
+                    keepaspectratio: true,
+                    axis: true,
+                    grid: false
+                }
+            );
         })();
     </script>
 </body>
