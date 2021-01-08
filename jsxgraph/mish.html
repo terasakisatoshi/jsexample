@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Type Script Greeter</title>
+    <link rel="stylesheet" type="text/css" href="http://jsxgraph.uni-bayreuth.de/distrib/jsxgraph.css" />
+    <script type="text/javascript" src="http://jsxgraph.uni-bayreuth.de/distrib/jsxgraphcore.js"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+
+<body>
+    <div id="board" class="jxgbox" style="width:500px; height:500px;"></div>
+    <script type="text/javascript">
+        JXG.Options.text.useMathJax = true;
+        var board = JXG.JSXGraph.initBoard(
+            "board",
+            {
+                boundingbox: [-15, 15, 15, -15],
+                axis: true
+            }
+        );
+        /* The slider neesd the following input parameters:
+        [[x1, y1], [x2, y2], [min, start, max]]
+        [x1, y1]: first point of the ruler
+        [x2, y2]: last point of the ruler
+        min: minimum value of the slider
+        start: initial value of the slider
+        max: maximum value of the slider
+        */
+        function sigmoid(x){
+            return 1/(1 + Math.exp(-x))
+        }
+        var beta = board.create("slider", [[-10, 3], [-3, 3], [0, 0.05, 10]], { name: "β" });
+        var func = board.create(
+            "functiongraph",
+            [
+                function (x) {
+                    return x * sigmoid(beta.Value() * x);
+                }
+            ]
+        )
+        var quadratic = board.create(
+            'text',
+            [
+                -10,
+                8,
+                function () {
+                    return '\\[f(x) = x \\sigma(\\beta x)\\]';
+                }
+            ],
+            { fontSize: 20 }
+        );
+    </script>
+</body>
+
+</html>
