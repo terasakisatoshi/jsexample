@@ -106,3 +106,5 @@ dist
 # Regarding to Jupyter Notebook
 .ipynb_checkpoints
 *.ipynb
+
+*.DS_Store
