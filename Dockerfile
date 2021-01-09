@@ -16,8 +16,6 @@ RUN apt-get update && \
 
 RUN pip3 install jupyter jupyterlab jupytext
 
-RUN node --version
-
 RUN jupyter labextension install @hokyjack/jupyterlab-monokai-plus --no-build && \
     jupyter lab build -y && \
     jupyter lab clean -y && \

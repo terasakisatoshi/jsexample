@@ -1,0 +1,13 @@
+version: '3'
+services:
+  lab:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: jsexample
+    volumes:
+      - ./:/work
+    working_dir: /work
+    ports:
+      - "8888:8888"
+    command: jupyter lab --notebook-dir /work --ip=0.0.0.0 --allow-root
