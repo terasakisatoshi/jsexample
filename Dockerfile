@@ -5,15 +5,18 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUn apt-get update && apt-get install -y \
 	python3 \
 	python3-pip \
+	curl \
 	&& apt-get clean && rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*
 
 # install NodeJS
 RUN apt-get update && \
-    curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
-    apt-get install -y nodejs && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* # clean up
+	curl -sL https://deb.nodesource.com/setup_14.x | bash - && \
+	apt-get install -y nodejs && \
+    apt-get clean && rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*
 
 RUN pip3 install jupyter jupyterlab jupytext
+
+RUN node --version
 
 RUN jupyter labextension install @hokyjack/jupyterlab-monokai-plus --no-build && \
     jupyter lab build -y && \
@@ -43,7 +46,6 @@ RUN mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/notebook-extension && 
 }\n\
 \
 ' >> /root/.jupyter/lab/user-settings/@jupyterlab/notebook-extension/tracker.jupyterlab-settings
-
 
 # For Jupyter Notebook
 EXPOSE 8888
