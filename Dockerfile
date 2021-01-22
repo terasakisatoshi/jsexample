@@ -25,7 +25,12 @@ RUN jupyter labextension install @hokyjack/jupyterlab-monokai-plus --no-build &&
     echo Done
 
 
-RUN npm install -g tslab && tslab install --python=python3
+RUN npm install -g tslab && \
+    tslab install --python=python3 && \
+    npm cache clean --force && \
+    rm -rf ~/.cache/yarn && \
+    rm -rf ~/.node-gyp && \
+    echo Done
 
 # Set color theme Monokai++ by default (The selection is due to my hobby)
 RUN mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension && echo '\
