@@ -8,7 +8,7 @@ import dash_table
 from dash_table.Format import Format, Group, Padding, Symbol
 import dash_html_components as html
 from dash.dependencies import Input, Output
-from numpy import isin
+from numpy import isin, str_
 import pandas as pd
 import jpholiday
 
@@ -84,14 +84,14 @@ for col in df.columns:
             {
                 "name": col,
                 "id": col,
-                "type": "numeric",
-                "format": Format(
-                    group_delimiter=":",
-                    padding=Padding.yes,
-                    padding_width=4 + 1,
-                    group=Group.yes,
-                    groups=[2],
-                ),
+                "type": "text",
+                # "format": Format(
+                #    group_delimiter=":",
+                #    padding=Padding.yes,
+                #    padding_width=4 + 1,
+                #    group=Group.yes,
+                #    groups=[2],
+                # ),
             }
         )
     elif col in ["勤務時間"]:
@@ -270,31 +270,30 @@ def updateData(active_cell, data_previous, data):
         row = active_cell_previous["row"]
         column_id = active_cell_previous["column_id"]
         value = data[row][column_id]
-        if isinstance(value, int):
-            # e.g.
-            # 145 -> 145
-            # 12345 -> 2345
-            # 99999 -> 9999
-            value %= 10000
+        if value.isdigit():
+            value = int(value)
+            if value in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:
+                value *= 100
             # zero padding
             # 145 -> 0145
             # 2345 -> 2345
             # 9999 -> 9999
+            # 100000 -> 100000
             str_value = str(value).zfill(4)
             # format with HH:MM
             # 0145 -> 01:45
             # 2345 -> 23:45
             # 9999 -> 99:99
-            print("str_value", str_value)
-            try:  # to parse time
-                str_value = ":".join([str_value[0:2], str_value[2:4]])
-                str_value = datetime.strptime(str_value, "%H:%M").strftime("%H:%M")
-                data[row][column_id] = str_value
-            except ValueError:
-                print("Error")
-                # revert data with `previous_data`
+            str_value = ":".join([str_value[0:2], str_value[2:4]])
+        else:
+            str_value = value
+        try:  # to parse timep
+            str_value = datetime.strptime(str_value, "%H:%M").strftime("%H:%M")
+            data[row][column_id] = str_value
+        except Exception:
+            # revert data with `previous_data`
+            if str_value:
                 data[row][column_id] = data_previous[row][column_id]
-                pass
     data = calculate_working_hours(data)
 
     total_overwork_working_time = total_working_time = 0
@@ -305,7 +304,6 @@ def updateData(active_cell, data_previous, data):
             total_working_time += wt
         if not isinstance(over_wt, str):
             total_overwork_working_time += over_wt
-    print(total_overwork_working_time)
     summary = [dict(合計勤務時間=total_working_time, 合計残業時間=total_overwork_working_time)]
     active_cell_previous = active_cell
     return data, summary
