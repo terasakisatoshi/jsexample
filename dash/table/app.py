@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
 import os
 from datetime import datetime
+
 import dash
 import dash_table
 from dash_table.Format import Format, Group, Padding
 import dash_html_components as html
 from dash.dependencies import Input, Output
 import pandas as pd
+import jpholiday
 
 # ----------------------------------------------------------------
 
 WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"]
-ACTIVE_CELL = {"row": 0, "column": 2, "column_id": "Begin"}
+HOLIDAY = "祝"
+ACTIVE_CELL = {"row": 0, "column": 2, "column_id": "開始時刻"}
 CURRENT_YEAR_MONTH = datetime.today().strftime("%Y_%m")
 ATTENDANCE_BOOK = (
     f"{os.path.dirname(__file__)}/.data/{CURRENT_YEAR_MONTH}_attendance_book.json"
@@ -20,15 +23,21 @@ BACKUP_FILE = f"{os.path.dirname(__file__)}/.backup/{os.path.basename(ATTENDANCE
 
 # ----------------------------------------------------------------
 
+
 if os.path.exists(ATTENDANCE_BOOK):
     df = pd.read_json(ATTENDANCE_BOOK)
     # preprocess
-    df["Date"] = pd.to_datetime(df["Date"], format="%Y/%m/%d").dt.strftime("%Y/%m/%d")
+    df["日付"] = pd.to_datetime(df["日付"], format="%Y/%m/%d").dt.strftime("%Y/%m/%d")
 
     df.to_json(BACKUP_FILE)
 else:
     y = datetime.today().year
     m = datetime.today().month
+
+    def is_holiday(d):
+        holidays = [d[0] for d in jpholiday.month_holidays(y, m)]
+        return d in holidays
+
     year_month = f"{y}-{m}-1"
     year_next_month = f"{y}-{m+1}-1"
     dates = pd.to_datetime(pd.date_range(year_month, year_next_month)[:-1]).map(
@@ -36,12 +45,13 @@ else:
     )
     data = []
     for d in dates:
+        is_holiday(d)
         data.append(
             dict(
-                Date=d.to_pydatetime().strftime("%Y/%m/%d"),
-                DoW=WEEKDAYS[d.weekday()],
-                Begin="",
-                End="",
+                日付=d.strftime("%Y/%m/%d"),
+                曜日=HOLIDAY if is_holiday(d) else WEEKDAYS[d.weekday()],
+                開始時刻="",
+                終了時刻="",
                 TODO="",
             )
         )
@@ -53,7 +63,7 @@ app = dash.Dash(__name__)
 
 columns = []
 for col in df.columns:
-    if col in ["Date", "DoW"]:
+    if col in ["日付", "曜日"]:
         columns.append(
             {
                 "name": col,
@@ -62,7 +72,7 @@ for col in df.columns:
                 "editable": False,
             }
         )
-    elif col in ["Begin", "End"]:
+    elif col in ["開始時刻", "終了時刻"]:
         columns.append(
             {
                 "name": col,
@@ -100,22 +110,29 @@ app.layout = html.Div(
             style_data_conditional=[
                 {
                     "if": {
-                        "column_id": ["Date", "DoW", "Begin", "End"],
-                        "filter_query": "{Begin} > {End}",
+                        "column_id": ["日付", "曜日", "開始時刻", "終了時刻"],
+                        "filter_query": "{開始時刻} > {終了時刻}",
                     },
                     "backgroundColor": "tomato",
                 },
                 {
                     "if": {
-                        "column_id": ["Date", "DoW"],
-                        "filter_query": "{DoW} eq '土'",
+                        "column_id": ["日付", "曜日"],
+                        "filter_query": f"{{曜日}} eq {WEEKDAYS[-2]}",
                     },
                     "color": "blue",
                 },
                 {
                     "if": {
-                        "column_id": ["Date", "DoW"],
-                        "filter_query": "{DoW} eq '日'",
+                        "column_id": ["日付", "曜日"],
+                        "filter_query": f"{{曜日}} eq {WEEKDAYS[-1]}",
+                    },
+                    "color": "red",
+                },
+                {
+                    "if": {
+                        "column_id": ["日付", "曜日"],
+                        "filter_query": f"{{曜日}} eq {HOLIDAY}",
                     },
                     "color": "red",
                 },
@@ -151,7 +168,7 @@ active_cell_previous = ACTIVE_CELL
 )
 def updateData(active_cell, data_previous, data):
     global active_cell_previous
-    if active_cell_previous["column_id"] in ["Data", "DoW"]:
+    if active_cell_previous["column_id"] in ["Data", "曜日"]:
         # Just upate activate_cell
         active_cell_previous = active_cell
         return data
