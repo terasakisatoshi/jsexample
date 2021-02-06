@@ -10,13 +10,13 @@ import pandas as pd
 
 # ----------------------------------------------------------------
 
-YEAR = "2021"
-MONTH = "02"
 WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"]
 ACTIVE_CELL = {"row": 0, "column": 2, "column_id": "Begin"}
 CURRENT_YEAR_MONTH = datetime.today().strftime("%Y_%m")
-ATTENDANCE_BOOK = f"./data/{CURRENT_YEAR_MONTH}_attendance_book.json"
-BACKUP_FILE = f"./backup/{ATTENDANCE_BOOK}"
+ATTENDANCE_BOOK = (
+    f"{os.path.dirname(__file__)}/.data/{CURRENT_YEAR_MONTH}_attendance_book.json"
+)
+BACKUP_FILE = f"{os.path.dirname(__file__)}/.backup/{os.path.basename(ATTENDANCE_BOOK)}"
 
 # ----------------------------------------------------------------
 
@@ -27,8 +27,25 @@ if os.path.exists(ATTENDANCE_BOOK):
 
     df.to_json(BACKUP_FILE)
 else:
-    # Generate Template
-    pass
+    y = datetime.today().year
+    m = datetime.today().month
+    year_month = f"{y}-{m}-1"
+    year_next_month = f"{y}-{m+1}-1"
+    dates = pd.to_datetime(pd.date_range(year_month, year_next_month)[:-1]).map(
+        lambda d: d.to_pydatetime()
+    )
+    data = []
+    for d in dates:
+        data.append(
+            dict(
+                Date=d.to_pydatetime().strftime("%Y/%m/%d"),
+                DoW=WEEKDAYS[d.weekday()],
+                Begin="",
+                End="",
+                TODO="",
+            )
+        )
+    df = pd.DataFrame(data)
 
 data = list(df.to_dict("index").values())
 
