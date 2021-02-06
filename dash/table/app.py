@@ -16,6 +16,9 @@ import jpholiday
 
 WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"]
 DAYS_OFF_INDEX = [5, 6]  # "土, 日"
+
+UNREGISTERED = "未登録"
+DAYS_OFF = "休日"
 HOLIDAY = "祝"
 EMPTY_VALUE = ""
 ACTIVE_CELL = {"row": 0, "column": 2, "column_id": "開始時刻"}
@@ -28,8 +31,8 @@ STANDARD_WORKING_TIME = 8
 WORKING_STATUS = [
     "勤務",
     "有給",
-    "休日",
-    "未登録",
+    DAYS_OFF,
+    UNREGISTERED,
 ]
 
 W２I = {ws: WORKING_STATUS.index(ws) for ws in WORKING_STATUS}
@@ -61,11 +64,8 @@ else:
     data = []
     for d in dates:
         wd = HOLIDAY if is_holiday(d) else WEEKDAYS[d.weekday()]
-        ws = (
-            WORKING_STATUS[W２I["休日"]]
-            if (is_holiday(d) or is_dayoff(d))
-            else WORKING_STATUS[W２I["未登録"]]
-        )
+        ws = DAYS_OFF if (is_holiday(d) or is_dayoff(d)) else UNREGISTERED
+        break_time = "" if ws == DAYS_OFF else 1
         data.append(
             dict(
                 日付=d.strftime("%Y/%m/%d"),
@@ -73,7 +73,7 @@ else:
                 勤務状態=ws,
                 開始時刻=EMPTY_VALUE,
                 終了時刻=EMPTY_VALUE,
-                休憩=1,
+                休憩=break_time,
                 勤務時間=EMPTY_VALUE,
                 残業時間=EMPTY_VALUE,
                 進捗=EMPTY_VALUE,
@@ -279,22 +279,42 @@ def saveData(n_clicks, data):
 active_cell_previous = ACTIVE_CELL
 
 
-def calculate_working_hours(data):
+def format_datatable(data):
+    """
+    TODO: Implement data_previous
+    """
     for d in data:
+        if d["勤務状態"] in ["有給", "休日"]:
+            d["開始時刻"] = EMPTY_VALUE
+            d["終了時刻"] = EMPTY_VALUE
+            d["勤務時間"] = EMPTY_VALUE
+            d["残業時間"] = EMPTY_VALUE
+            continue
         try:
+            break_time = d["休憩"]
+            if break_time:
+                if break_time < 0:
+                    d["休憩"] = ""
+            else:
+                break_time = 0
             end = datetime.strptime(d["終了時刻"], "%H:%M")
             begin = datetime.strptime(d["開始時刻"], "%H:%M")
-            break_time = d["休憩"]
             if (end - begin).days < 0:
                 raise ValueError
             working_hours = (end - begin).seconds / 3600
             working_hours -= break_time
             d["勤務時間"] = working_hours
             d["残業時間"] = max(working_hours - STANDARD_WORKING_TIME, 0)
-            d["勤務状態"] = WORKING_STATUS[W2I["勤務"]]
+            d["勤務状態"] = "勤務"
         except ValueError:
             d["勤務時間"] = EMPTY_VALUE
             d["残業時間"] = EMPTY_VALUE
+            dt = datetime.strptime(d["日付"], "%Y/%m/%d")
+            if is_holiday(dt) or is_dayoff(dt):
+                d["勤務状態"] = DAYS_OFF
+            else:
+                d["勤務状態"] = UNREGISTERED
+
     return data
 
 
@@ -335,8 +355,9 @@ def updateData(active_cell, data_previous, data):
             # revert data with `previous_data`
             if str_value:  # str_value is not empty
                 data[row][column_id] = data_previous[row][column_id]
-    data = calculate_working_hours(data)
+    data = format_datatable(data)
 
+    # update summary
     total_overwork_working_time = total_working_time = 0
     for d in data:
         wt = d["勤務時間"]
@@ -346,7 +367,10 @@ def updateData(active_cell, data_previous, data):
         if not isinstance(over_wt, str):
             total_overwork_working_time += over_wt
     summary = [dict(合計勤務時間=total_working_time, 合計残業時間=total_overwork_working_time)]
+
+    # update active_cell_previous
     active_cell_previous = active_cell
+
     return data, summary
 
 
