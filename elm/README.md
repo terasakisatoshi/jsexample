@@ -3,5 +3,6 @@
 # Usage
 
 ```console
+$ cd counter
 $ elm reactor
 ```
