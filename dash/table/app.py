@@ -16,6 +16,7 @@ import jpholiday
 
 WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"]
 HOLIDAY = "祝"
+EMPTY_VALUE = ""
 ACTIVE_CELL = {"row": 0, "column": 2, "column_id": "開始時刻"}
 CURRENT_YEAR_MONTH = datetime.today().strftime("%Y_%m")
 ATTENDANCE_BOOK = (
@@ -53,12 +54,12 @@ else:
             dict(
                 日付=d.strftime("%Y/%m/%d"),
                 曜日=HOLIDAY if is_holiday(d) else WEEKDAYS[d.weekday()],
-                開始時刻="",
-                終了時刻="",
+                開始時刻=EMPTY_VALUE,
+                終了時刻=EMPTY_VALUE,
                 休憩=1,
-                勤務時間="",
-                残業時間="",
-                進捗="",
+                勤務時間=EMPTY_VALUE,
+                残業時間=EMPTY_VALUE,
+                進捗=EMPTY_VALUE,
             )
         )
     df = pd.DataFrame(data)
@@ -138,7 +139,7 @@ app.layout = html.Div(
     children=[
         html.H1("Attendance Book"),
         html.Button("Save", id="save-button"),
-        html.Div("", id="save-status"),
+        html.Div(EMPTY_VALUE, id="save-status"),
         html.H2("Summary"),
         dash_table.DataTable(
             id="summary-table",
@@ -173,7 +174,7 @@ app.layout = html.Div(
                 textAlign="center",
                 backgroundColor="rgb(230, 230, 230)",
             ),
-            data=[dict(合計勤務時間="", 合計残業時間="")],
+            data=[dict(合計勤務時間=EMPTY_VALUE, 合計残業時間=EMPTY_VALUE)],
         ),
         html.H2("Table"),
         dash_table.DataTable(
@@ -188,12 +189,27 @@ app.layout = html.Div(
                 textAlign="center",
             ),
             style_data_conditional=[
+                {"if": {"row_index": "odd"}, "backgroundColor": "rgb(248, 248, 248)"},
                 {
                     "if": {
                         "column_id": ["日付", "曜日", "開始時刻", "終了時刻"],
-                        "filter_query": "{開始時刻} > {終了時刻}",
+                        "filter_query": "{開始時刻} ne '' && {終了時刻} eq ''",
+                    },
+                    "backgroundColor": "green",
+                },
+                {
+                    "if": {
+                        "column_id": ["日付", "曜日", "開始時刻", "終了時刻"],
+                        "filter_query": "{開始時刻} eq '' && {終了時刻} ne ''",
                     },
                     "backgroundColor": "tomato",
+                },
+                {
+                    "if": {
+                        "column_id": ["日付", "曜日", "開始時刻", "終了時刻"],
+                        "filter_query": "{開始時刻} ne '' && {終了時刻} ne '' && {勤務時間} <=0",
+                    },
+                    "backgroundColor": "red",
                 },
                 {
                     "if": {
@@ -216,7 +232,6 @@ app.layout = html.Div(
                     },
                     "color": "red",
                 },
-                {"if": {"row_index": "odd"}, "backgroundColor": "rgb(248, 248, 248)"},
             ],
         ),
     ]
@@ -235,7 +250,7 @@ def saveData(n_clicks, data):
         df.to_json(ATTENDANCE_BOOK)
         return f"Saved data at {ATTENDANCE_BOOK}"
     else:
-        return ""
+        return EMPTY_VALUE
 
 
 active_cell_previous = ACTIVE_CELL
@@ -247,13 +262,15 @@ def calculate_working_hours(data):
             end = datetime.strptime(d["終了時刻"], "%H:%M")
             begin = datetime.strptime(d["開始時刻"], "%H:%M")
             break_time = d["休憩"]
+            if (end - begin).days < 0:
+                raise ValueError
             working_hours = (end - begin).seconds / 3600
             working_hours -= break_time
             d["勤務時間"] = working_hours
             d["残業時間"] = max(working_hours - STANDARD_WORKING_TIME, 0)
         except ValueError:
-            d["勤務時間"] = ""
-            d["残業時間"] = ""
+            d["勤務時間"] = EMPTY_VALUE
+            d["残業時間"] = EMPTY_VALUE
     return data
 
 
@@ -269,10 +286,12 @@ def updateData(active_cell, data_previous, data):
     if active_cell_previous["column_id"] in ["開始時刻", "終了時刻"]:
         row = active_cell_previous["row"]
         column_id = active_cell_previous["column_id"]
-        value = data[row][column_id]
-        if value.isdigit():
-            value = int(value)
-            if value in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:
+        str_value: str = data[row][column_id]
+        if str_value.isdigit():
+            value: int = int(str_value)
+            if value in range(24, 24 + 6):
+                value = value % 24  # will be "00:00"
+            if value in range(0, 24):
                 value *= 100
             # zero padding
             # 145 -> 0145
@@ -285,14 +304,12 @@ def updateData(active_cell, data_previous, data):
             # 2345 -> 23:45
             # 9999 -> 99:99
             str_value = ":".join([str_value[0:2], str_value[2:4]])
-        else:
-            str_value = value
         try:  # to parse timep
             str_value = datetime.strptime(str_value, "%H:%M").strftime("%H:%M")
             data[row][column_id] = str_value
         except Exception:
             # revert data with `previous_data`
-            if str_value:
+            if str_value:  # str_value is not empty
                 data[row][column_id] = data_previous[row][column_id]
     data = calculate_working_hours(data)
 
