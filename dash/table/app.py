@@ -15,8 +15,8 @@ MONTH = "02"
 WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"]
 ACTIVE_CELL = {"row": 0, "column": 2, "column_id": "Begin"}
 CURRENT_YEAR_MONTH = datetime.today().strftime("%Y_%m")
-ATTENDANCE_BOOK = f"{CURRENT_YEAR_MONTH}_attendance_book.json"
-BACKUP_FILE = f"backup_{ATTENDANCE_BOOK}"
+ATTENDANCE_BOOK = f"./data/{CURRENT_YEAR_MONTH}_attendance_book.json"
+BACKUP_FILE = f"./backup/{ATTENDANCE_BOOK}"
 
 # ----------------------------------------------------------------
 
