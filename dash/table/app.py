@@ -15,6 +15,7 @@ import jpholiday
 # -----------------------CONSTANTS-----------------------------------------
 
 WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"]
+DAYS_OFF_INDEX = [5, 6]  # "土, 日"
 HOLIDAY = "祝"
 EMPTY_VALUE = ""
 ACTIVE_CELL = {"row": 0, "column": 2, "column_id": "開始時刻"}
@@ -24,7 +25,14 @@ ATTENDANCE_BOOK = (
 )
 BACKUP_FILE = f"{os.path.dirname(__file__)}/.backup/{os.path.basename(ATTENDANCE_BOOK)}"
 STANDARD_WORKING_TIME = 8
+WORKING_STATUS = [
+    "勤務",
+    "有給",
+    "休日",
+    "未登録",
+]
 
+W２I = {ws: WORKING_STATUS.index(ws) for ws in WORKING_STATUS}
 # ----------------------------------------------------------------
 
 
@@ -42,6 +50,9 @@ else:
         holidays = [d[0] for d in jpholiday.month_holidays(y, m)]
         return d in holidays
 
+    def is_dayoff(d):
+        return d.weekday() in DAYS_OFF_INDEX
+
     year_month = f"{y}-{m}-1"
     year_next_month = f"{y}-{m+1}-1"
     dates = pd.to_datetime(pd.date_range(year_month, year_next_month)[:-1]).map(
@@ -49,11 +60,17 @@ else:
     )
     data = []
     for d in dates:
-        is_holiday(d)
+        wd = HOLIDAY if is_holiday(d) else WEEKDAYS[d.weekday()]
+        ws = (
+            WORKING_STATUS[W２I["休日"]]
+            if (is_holiday(d) or is_dayoff(d))
+            else WORKING_STATUS[W２I["未登録"]]
+        )
         data.append(
             dict(
                 日付=d.strftime("%Y/%m/%d"),
-                曜日=HOLIDAY if is_holiday(d) else WEEKDAYS[d.weekday()],
+                曜日=wd,
+                勤務状態=ws,
                 開始時刻=EMPTY_VALUE,
                 終了時刻=EMPTY_VALUE,
                 休憩=1,
@@ -86,13 +103,6 @@ for col in df.columns:
                 "name": col,
                 "id": col,
                 "type": "text",
-                # "format": Format(
-                #    group_delimiter=":",
-                #    padding=Padding.yes,
-                #    padding_width=4 + 1,
-                #    group=Group.yes,
-                #    groups=[2],
-                # ),
             }
         )
     elif col in ["勤務時間"]:
@@ -130,6 +140,16 @@ for col in df.columns:
                 "name": col,
                 "id": col,
                 "type": "text",
+            }
+        )
+    elif col in ["勤務状態"]:
+        columns.append(
+            {
+                "name": col,
+                "id": col,
+                "type": "text",
+                "presentation": "dropdown",
+                "clearable": False,
             }
         )
     else:
@@ -188,6 +208,9 @@ app.layout = html.Div(
                 fontWeight="bold",
                 textAlign="center",
             ),
+            dropdown={
+                "勤務状態": {"options": [{"label": i, "value": i} for i in WORKING_STATUS]},
+            },
             style_data_conditional=[
                 {"if": {"row_index": "odd"}, "backgroundColor": "rgb(248, 248, 248)"},
                 {
@@ -268,6 +291,7 @@ def calculate_working_hours(data):
             working_hours -= break_time
             d["勤務時間"] = working_hours
             d["残業時間"] = max(working_hours - STANDARD_WORKING_TIME, 0)
+            d["勤務状態"] = WORKING_STATUS[W2I["勤務"]]
         except ValueError:
             d["勤務時間"] = EMPTY_VALUE
             d["残業時間"] = EMPTY_VALUE
