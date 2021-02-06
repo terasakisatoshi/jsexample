@@ -282,8 +282,6 @@ def format_datatable(data):
         if d["勤務状態"] in ["有給"]:
             dt = datetime.strptime(d["日付"], "%Y/%m/%d")
             dt = date(dt.year, dt.month, dt.day)
-            print(is_holiday(dt))
-            print(dt, is_holiday(dt) or is_dayoff(dt))
             if is_holiday(dt) or is_dayoff(dt):
                 d["勤務状態"] = DAYS_OFF
             d["開始時刻"] = EMPTY_VALUE
