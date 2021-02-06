@@ -252,7 +252,8 @@ def calculate_working_hours(data):
             d["勤務時間"] = working_hours
             d["残業時間"] = max(working_hours - STANDARD_WORKING_TIME, 0)
         except ValueError:
-            pass
+            d["勤務時間"] = ""
+            d["残業時間"] = ""
     return data
 
 
