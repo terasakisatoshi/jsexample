@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
-from datetime import datetime
-from typing import cast
+from datetime import date, datetime
 
 import dash
 import dash_table
@@ -65,7 +64,6 @@ else:
     for d in dates:
         wd = HOLIDAY if is_holiday(d) else WEEKDAYS[d.weekday()]
         ws = DAYS_OFF if (is_holiday(d) or is_dayoff(d)) else UNREGISTERED
-        break_time = "" if ws == DAYS_OFF else 1
         data.append(
             dict(
                 日付=d.strftime("%Y/%m/%d"),
@@ -73,7 +71,7 @@ else:
                 勤務状態=ws,
                 開始時刻=EMPTY_VALUE,
                 終了時刻=EMPTY_VALUE,
-                休憩=break_time,
+                休憩=EMPTY_VALUE,
                 勤務時間=EMPTY_VALUE,
                 残業時間=EMPTY_VALUE,
                 進捗=EMPTY_VALUE,
@@ -280,11 +278,14 @@ active_cell_previous = ACTIVE_CELL
 
 
 def format_datatable(data):
-    """
-    TODO: Implement data_previous
-    """
     for d in data:
-        if d["勤務状態"] in ["有給", "休日"]:
+        if d["勤務状態"] in ["有給"]:
+            dt = datetime.strptime(d["日付"], "%Y/%m/%d")
+            dt = date(dt.year, dt.month, dt.day)
+            print(is_holiday(dt))
+            print(dt, is_holiday(dt) or is_dayoff(dt))
+            if is_holiday(dt) or is_dayoff(dt):
+                d["勤務状態"] = DAYS_OFF
             d["開始時刻"] = EMPTY_VALUE
             d["終了時刻"] = EMPTY_VALUE
             d["勤務時間"] = EMPTY_VALUE
@@ -310,6 +311,7 @@ def format_datatable(data):
             d["勤務時間"] = EMPTY_VALUE
             d["残業時間"] = EMPTY_VALUE
             dt = datetime.strptime(d["日付"], "%Y/%m/%d")
+            dt = date(dt.year, dt.month, dt.day)
             if is_holiday(dt) or is_dayoff(dt):
                 d["勤務状態"] = DAYS_OFF
             else:
