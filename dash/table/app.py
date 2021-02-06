@@ -1,38 +1,34 @@
 # -*- coding: utf-8 -*-
+import os
 from datetime import datetime
-
 import dash
 import dash_table
 from dash_table.Format import Format, Group, Padding
+import dash_html_components as html
 from dash.dependencies import Input, Output
 import pandas as pd
+
+# ----------------------------------------------------------------
 
 YEAR = "2021"
 MONTH = "02"
 WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"]
 ACTIVE_CELL = {"row": 0, "column": 2, "column_id": "Begin"}
-day1 = {"Date": f"{YEAR}/{MONTH}/01", "Begin": "09:10", "End": "16:00"}
-day2 = {"Date": f"{YEAR}/{MONTH}/02", "Begin": "09:20", "End": "17:00"}
-day3 = {"Date": f"{YEAR}/{MONTH}/03", "Begin": "10:30", "End": "18:00"}
-day4 = {"Date": f"{YEAR}/{MONTH}/04", "Begin": "09:30", "End": "18:00"}
-day5 = {"Date": f"{YEAR}/{MONTH}/05", "Begin": "09:30", "End": "18:00"}
-day6 = {"Date": f"{YEAR}/{MONTH}/06", "Begin": "18:30", "End": "18:00"}
-day7 = {"Date": f"{YEAR}/{MONTH}/07", "Begin": "09:30", "End": "18:00"}
+CURRENT_YEAR_MONTH = datetime.today().strftime("%Y_%m")
+ATTENDANCE_BOOK = f"{CURRENT_YEAR_MONTH}_attendance_book.json"
+BACKUP_FILE = f"backup_{ATTENDANCE_BOOK}"
 
-days = [day1, day2, day3, day4, day5, day6, day7]
-df = pd.DataFrame(days)
+# ----------------------------------------------------------------
 
-# parse data as datatime objefct and convert them into string object
-df["Begin"] = pd.to_datetime(df["Begin"], format="%H:%M").dt.strftime("%H:%M")
-df["End"] = pd.to_datetime(df["End"], format="%H:%M").dt.strftime("%H:%M")
-df["Date"] = pd.to_datetime(df["Date"], format="%Y/%m/%d").dt.strftime("%Y/%m/%d")
+if os.path.exists(ATTENDANCE_BOOK):
+    df = pd.read_json(ATTENDANCE_BOOK)
+    # preprocess
+    df["Date"] = pd.to_datetime(df["Date"], format="%Y/%m/%d").dt.strftime("%Y/%m/%d")
 
-day_of_the_weeks = pd.to_datetime(df["Date"], format="%Y/%m/%d").map(
-    lambda d: WEEKDAYS[datetime.weekday(d)]
-)
-# insert `day_of_the_weeks` next to "Date"
-loc = list(df.columns).index("Date") + 1
-df.insert(loc, "DoW", day_of_the_weeks)
+    df.to_json(BACKUP_FILE)
+else:
+    # Generate Template
+    pass
 
 data = list(df.to_dict("index").values())
 
@@ -64,40 +60,68 @@ for col in df.columns:
                 ),
             }
         )
+    else:
+        columns.append(
+            {
+                "name": col,
+                "id": col,
+                "type": "text",
+            }
+        )
 
-
-app.layout = dash_table.DataTable(
-    id="time-table",
-    editable=True,
-    columns=columns,
-    data=data,
-    active_cell=ACTIVE_CELL,
-    style_data_conditional=[
-        {
-            "if": {
-                "column_id": df.columns,
-                "filter_query": "{Begin} > {End}",
-            },
-            "backgroundColor": "tomato",
-        },
-        {
-            "if": {
-                "column_id": ["Date", "DoW"],
-                "filter_query": "{DoW} eq '土'",
-            },
-            "color": "blue",
-        },
-        {
-            "if": {
-                "column_id": ["Date", "DoW"],
-                "filter_query": "{DoW} eq '日'",
-            },
-            "color": "red",
-        },
-    ],
+app.layout = html.Div(
+    children=[
+        html.H1("Attendance Book"),
+        html.Button("Save", id="save-button"),
+        html.Div("", id="save-status"),
+        dash_table.DataTable(
+            id="time-table",
+            editable=True,
+            columns=columns,
+            data=data,
+            active_cell=ACTIVE_CELL,
+            style_data_conditional=[
+                {
+                    "if": {
+                        "column_id": ["Date", "DoW", "Begin", "End"],
+                        "filter_query": "{Begin} > {End}",
+                    },
+                    "backgroundColor": "tomato",
+                },
+                {
+                    "if": {
+                        "column_id": ["Date", "DoW"],
+                        "filter_query": "{DoW} eq '土'",
+                    },
+                    "color": "blue",
+                },
+                {
+                    "if": {
+                        "column_id": ["Date", "DoW"],
+                        "filter_query": "{DoW} eq '日'",
+                    },
+                    "color": "red",
+                },
+            ],
+        ),
+    ]
 )
 
-cnt = 0
+
+@app.callback(
+    Output("save-status", "children"),
+    Input("save-button", "n_clicks"),
+    Input("time-table", "data"),
+)
+def saveData(n_clicks, data):
+    if n_clicks:
+        df = pd.DataFrame(data)
+        df.to_json(ATTENDANCE_BOOK)
+        return f"Saved data at {ATTENDANCE_BOOK}"
+    else:
+        return ""
+
+
 active_cell_previous = ACTIVE_CELL
 
 
@@ -106,19 +130,18 @@ active_cell_previous = ACTIVE_CELL
     Input("time-table", "active_cell"),
     Input("time-table", "data_previous"),
     Input("time-table", "data"),
+    prevent_initial_call=True,
 )
-def goma(active_cell, data_previous, data):
-    global cnt
+def updateData(active_cell, data_previous, data):
     global active_cell_previous
     if active_cell_previous["column_id"] in ["Data", "DoW"]:
-        # nothing to do
+        # Just upate activate_cell
         active_cell_previous = active_cell
         return data
     else:
         row = active_cell_previous["row"]
         column_id = active_cell_previous["column_id"]
         value = data[row][column_id]
-        print(f"type of {value}, {type(value)}")
         if isinstance(value, int):
             # e.g.
             # 145 -> 145
@@ -134,16 +157,17 @@ def goma(active_cell, data_previous, data):
             # 0145 -> 01:45
             # 2345 -> 23:45
             # 9999 -> 99:99
-            print(str_value)
+            print("str_value", str_value)
             try:
+                str_value = ":".join([str_value[0:2], str_value[2:4]])
                 str_value = datetime.strptime(str_value, "%H:%M").strftime("%H:%M")
                 data[row][column_id] = str_value
             except ValueError:
+                print("Error")
                 # revert data with `previous_data`
                 data[row][column_id] = data_previous[row][column_id]
                 pass
         active_cell_previous = active_cell
-        print(data[0])
     return data
 
 
