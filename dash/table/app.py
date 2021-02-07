@@ -34,7 +34,6 @@ WORKING_STATUS = [
     UNREGISTERED,
 ]
 
-W２I = {ws: WORKING_STATUS.index(ws) for ws in WORKING_STATUS}
 # ----------------------------------------------------------------
 
 
@@ -74,7 +73,7 @@ else:
                 休憩=EMPTY_VALUE,
                 勤務時間=EMPTY_VALUE,
                 残業時間=EMPTY_VALUE,
-                進捗=EMPTY_VALUE,
+                業務内容=EMPTY_VALUE,
             )
         )
     df = pd.DataFrame(data)
@@ -132,7 +131,7 @@ for col in df.columns:
                 "format": Format(symbol=Symbol.yes, symbol_suffix=" [h]"),
             }
         )
-    elif col in ["進捗"]:
+    elif col in ["業務内容"]:
         columns.append(
             {
                 "name": col,
