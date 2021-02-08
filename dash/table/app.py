@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import time
 from datetime import date, datetime
 
 import dash
@@ -23,16 +24,24 @@ UNREGISTERED = "未登録"
 DAYS_OFF = "休日"
 HOLIDAY = "祝"
 EMPTY_VALUE = ""
-ACTIVE_CELL = {"row": 0, "column": 2, "column_id": "開始時刻"}
+
 CURRENT_YEAR_MONTH = datetime.today().strftime("%Y_%m")
 CURRENT_YEAR = int(datetime.today().strftime("%Y"))
 CURRENT_MONTH = int(datetime.today().strftime("%m"))
-CURRENT_DAYS = pd.to_datetime(
-    pd.date_range(
-        datetime(CURRENT_YEAR, CURRENT_MONTH, 1),
-        datetime(CURRENT_YEAR, CURRENT_MONTH + 1, 1),
-    )[:-1]
-).map(lambda d: d.to_pydatetime())
+CURRENT_DAYS = list(
+    pd.to_datetime(
+        pd.date_range(
+            datetime(CURRENT_YEAR, CURRENT_MONTH, 1),
+            datetime(CURRENT_YEAR, CURRENT_MONTH + 1, 1),
+        )[:-1]
+    ).map(lambda d: d.to_pydatetime())
+)
+
+ACTIVE_CELL = {
+    "row": (datetime.today() - datetime(CURRENT_YEAR, CURRENT_MONTH, 1)).days,
+    "column": 3 if time.strftime("%p") == "AM" else 4,
+    "column_id": "開始時刻" if time.strftime("%p") == "AM" else "終了時刻",
+}
 
 ATTENDANCE_BOOK = os.path.join(
     f"{os.path.dirname(__file__)}",
@@ -104,231 +113,243 @@ def load_df():
     return df
 
 
-df = load_df()
-data = list(df.to_dict("index").values())
-di = (datetime.today() - datetime(CURRENT_YEAR, CURRENT_MONTH, 1)).days
-today_mission = data[di]["進捗報告"]
-
 app = dash.Dash(__name__)
 
-columns = []
 
-for col in df.columns:
-    if col in ["日付", "曜日"]:
-        columns.append(
-            {
-                "name": col,
-                "id": col,
-                "type": "text",
-                "editable": False,
-            }
-        )
-    elif col in ["開始時刻", "終了時刻"]:
-        columns.append(
-            {
-                "name": col,
-                "id": col,
-                "type": "text",
-            }
-        )
-    elif col in ["勤務時間"]:
-        columns.append(
-            {
-                "name": "勤務時間(＝終了-開始-休憩)",
-                "id": col,
-                "type": "numeric",
-                "editable": False,
-                "format": Format(symbol=Symbol.yes, symbol_suffix=" [h]"),
-            }
-        )
-    elif col in ["残業時間"]:
-        columns.append(
-            {
-                "name": f"残業時間(＝max(勤務時間-{STANDARD_WORKING_TIME}, 0))",
-                "id": col,
-                "type": "numeric",
-                "editable": False,
-                "format": Format(symbol=Symbol.yes, symbol_suffix=" [h]"),
-            }
-        )
-    elif col in ["休憩"]:
-        columns.append(
-            {
-                "name": col,
-                "id": col,
-                "type": "numeric",
-                "format": Format(symbol=Symbol.yes, symbol_suffix=" [h]"),
-            }
-        )
-    elif col in ["進捗報告"]:
-        columns.append(
-            {
-                "name": col,
-                "id": col,
-                "type": "text",
-                "presentation": "markdown",
-            }
-        )
-    elif col in ["勤務状態"]:
-        columns.append(
-            {
-                "name": col,
-                "id": col,
-                "type": "text",
-                "presentation": "dropdown",
-                "clearable": False,
-            }
-        )
-    else:
-        raise ValueError(f"Undefined column name {col} found")
+def serve_layout():
+    df = load_df()
+    data = list(df.to_dict("index").values())
+    di = (datetime.today() - datetime(CURRENT_YEAR, CURRENT_MONTH, 1)).days
+    today_mission = data[di]["進捗報告"]
 
-app.layout = html.Div(
-    children=[
-        html.H1("Attendance Book"),
-        html.Button("Save", id="button-save"),
-        html.Div(EMPTY_VALUE, id="save-notificaiton"),
-        html.H2("Summary"),
-        dash_table.DataTable(
-            id="summary-table",
-            editable=False,
-            columns=[
-                dict(
-                    name="合計勤務時間",
-                    id="合計勤務時間",
-                    type="numeric",
-                    editable=False,
-                    format=Format(symbol=Symbol.yes, symbol_suffix=" [h]"),
-                ),
-                dict(
-                    name="合計残業時間",
-                    id="合計残業時間",
-                    type="numeric",
-                    editable=False,
-                    format=Format(symbol=Symbol.yes, symbol_suffix=" [h]"),
-                ),
-            ],
-            style_data_conditional=[
+    columns = []
+
+    for col in df.columns:
+        if col in ["日付", "曜日"]:
+            columns.append(
                 {
-                    "if": {
-                        "column_id": ["合計残業時間"],
-                        "filter_query": "{合計残業時間} > 0",
+                    "name": col,
+                    "id": col,
+                    "type": "text",
+                    "editable": False,
+                }
+            )
+        elif col in ["開始時刻", "終了時刻"]:
+            columns.append(
+                {
+                    "name": col,
+                    "id": col,
+                    "type": "text",
+                }
+            )
+        elif col in ["勤務時間"]:
+            columns.append(
+                {
+                    "name": "勤務時間(＝終了-開始-休憩)",
+                    "id": col,
+                    "type": "numeric",
+                    "editable": False,
+                    "format": Format(symbol=Symbol.yes, symbol_suffix=" [h]"),
+                }
+            )
+        elif col in ["残業時間"]:
+            columns.append(
+                {
+                    "name": f"残業時間(＝max(勤務時間-{STANDARD_WORKING_TIME}, 0))",
+                    "id": col,
+                    "type": "numeric",
+                    "editable": False,
+                    "format": Format(symbol=Symbol.yes, symbol_suffix=" [h]"),
+                }
+            )
+        elif col in ["休憩"]:
+            columns.append(
+                {
+                    "name": col,
+                    "id": col,
+                    "type": "numeric",
+                    "format": Format(symbol=Symbol.yes, symbol_suffix=" [h]"),
+                }
+            )
+        elif col in ["進捗報告"]:
+            columns.append(
+                {
+                    "name": col,
+                    "id": col,
+                    "type": "text",
+                    "presentation": "markdown",
+                }
+            )
+        elif col in ["勤務状態"]:
+            columns.append(
+                {
+                    "name": col,
+                    "id": col,
+                    "type": "text",
+                    "presentation": "dropdown",
+                    "clearable": False,
+                }
+            )
+        else:
+            raise ValueError(f"Undefined column name {col} found")
+    return html.Div(
+        children=[
+            html.H1("Attendance Book"),
+            html.Button("Save", id="button-save"),
+            html.Div(EMPTY_VALUE, id="save-notificaiton"),
+            html.H2("Summary"),
+            dash_table.DataTable(
+                id="summary-table",
+                editable=False,
+                columns=[
+                    dict(
+                        name="合計勤務時間",
+                        id="合計勤務時間",
+                        type="numeric",
+                        editable=False,
+                        format=Format(symbol=Symbol.yes, symbol_suffix=" [h]"),
+                    ),
+                    dict(
+                        name="合計残業時間",
+                        id="合計残業時間",
+                        type="numeric",
+                        editable=False,
+                        format=Format(symbol=Symbol.yes, symbol_suffix=" [h]"),
+                    ),
+                ],
+                style_data_conditional=[
+                    {
+                        "if": {
+                            "column_id": ["合計残業時間"],
+                            "filter_query": "{合計残業時間} > 0",
+                        },
+                        "color": "purple",
                     },
-                    "color": "purple",
-                },
-            ],
-            style_header=dict(
-                fontWeight="bold",
-                textAlign="center",
-                backgroundColor="rgb(230, 230, 230)",
+                ],
+                style_header=dict(
+                    fontWeight="bold",
+                    textAlign="center",
+                    backgroundColor="rgb(230, 230, 230)",
+                ),
+                data=[dict(合計勤務時間=EMPTY_VALUE, 合計残業時間=EMPTY_VALUE)],
             ),
-            data=[dict(合計勤務時間=EMPTY_VALUE, 合計残業時間=EMPTY_VALUE)],
-        ),
-        html.H2("進捗報告"),
-        html.Div(
-            children=[
-                html.Div(id="intermediate-value", style={"display": "none"}),
-                html.Div(
-                    children=[
-                        dcc.Dropdown(
-                            id="dropdown-days",
-                            options=[
-                                {
-                                    "label": d.strftime(DATE_FORMAT),
-                                    "value": d.strftime(DATE_FORMAT),
-                                }
-                                for d in CURRENT_DAYS
-                            ],
-                            value=datetime.today().strftime(DATE_FORMAT),
-                        ),
-                        html.Button("Update", id="button-update"),
-                        html.Div(EMPTY_VALUE, id="update-notificaiton"),
-                        dcc.Textarea(
-                            id="textarea-report",
-                            placeholder="""本日の業務内容を入力してください．Markdown で書くことができます.\n画面右側に入力内容のプレビューが行われます.""",
-                            value=today_mission,
-                            style={
-                                "width": "95%",
-                                "height": 200,
-                            },
-                        ),
-                    ],
-                    style={
-                        "width": "49%",
-                        "display": "inline-block",
-                    },
-                ),
-                dcc.Markdown(
-                    id="markdown-report",
-                    children="""こちらに更新されます．""",
-                    style={"width": "49%", "height": 100, "display": "inline-block"},
-                ),
-            ]
-        ),
-        html.H2("Table"),
-        dash_table.DataTable(
-            id="time-table",
-            editable=True,
-            columns=columns,
-            data=data,
-            active_cell=ACTIVE_CELL,
-            export_headers="display",
-            export_format="xlsx",
-            style_header=dict(
-                backgroundColor="rgb(230, 230, 230)",
-                fontWeight="bold",
-                textAlign="center",
+            html.H2("進捗報告"),
+            html.Div(
+                children=[
+                    html.Div(
+                        children=[
+                            dcc.Dropdown(
+                                id="dropdown-days",
+                                options=[
+                                    {
+                                        "label": d.strftime(DATE_FORMAT),
+                                        "value": d.strftime(DATE_FORMAT),
+                                    }
+                                    for d in CURRENT_DAYS
+                                ],
+                                value=datetime.today().strftime(DATE_FORMAT),
+                            ),
+                            html.A(html.Button("Update", id="button-update"), href="/"),
+                            html.Div(EMPTY_VALUE, id="update-notificaiton"),
+                            dcc.Textarea(
+                                id="textarea-report",
+                                placeholder="""本日の業務内容を入力してください．Markdown で書くことができます.\n画面右側に入力内容のプレビューが行われます.""",
+                                value=today_mission,
+                                style={
+                                    "width": "95%",
+                                    "height": 200,
+                                },
+                            ),
+                        ],
+                        style={
+                            "width": "49%",
+                            "display": "inline-block",
+                        },
+                    ),
+                    dcc.Markdown(
+                        id="markdown-report",
+                        children="""こちらに更新されます．""",
+                        style={
+                            "width": "49%",
+                            "height": 100,
+                            "display": "inline-block",
+                        },
+                    ),
+                ]
             ),
-            dropdown={
-                "勤務状態": {"options": [{"label": i, "value": i} for i in WORKING_STATUS]},
-            },
-            style_data_conditional=[
-                {"if": {"row_index": "odd"}, "backgroundColor": "rgb(248, 248, 248)"},
-                {
-                    "if": {
-                        "column_id": ["日付", "曜日", "開始時刻", "終了時刻"],
-                        "filter_query": "{開始時刻} ne '' && {終了時刻} eq ''",
+            html.H2("Table"),
+            dash_table.DataTable(
+                id="attendance-table",
+                editable=True,
+                columns=columns,
+                data=data,
+                active_cell=ACTIVE_CELL,
+                export_headers="display",
+                export_format="xlsx",
+                style_header=dict(
+                    backgroundColor="rgb(230, 230, 230)",
+                    fontWeight="bold",
+                    textAlign="center",
+                ),
+                dropdown={
+                    "勤務状態": {
+                        "options": [{"label": i, "value": i} for i in WORKING_STATUS]
                     },
-                    "backgroundColor": "green",
                 },
-                {
-                    "if": {
-                        "column_id": ["日付", "曜日", "開始時刻", "終了時刻"],
-                        "filter_query": "{開始時刻} eq '' && {終了時刻} ne ''",
+                style_data_conditional=[
+                    {
+                        "if": {"row_index": "odd"},
+                        "backgroundColor": "rgb(248, 248, 248)",
                     },
-                    "backgroundColor": "tomato",
-                },
-                {
-                    "if": {
-                        "column_id": ["日付", "曜日", "開始時刻", "終了時刻"],
-                        "filter_query": "{開始時刻} ne '' && {終了時刻} ne '' && {勤務時間} <=0",
+                    {
+                        "if": {
+                            "column_id": ["日付", "曜日", "開始時刻", "終了時刻"],
+                            "filter_query": "{開始時刻} ne '' && {終了時刻} eq ''",
+                        },
+                        "backgroundColor": "green",
                     },
-                    "backgroundColor": "red",
-                },
-                {
-                    "if": {
-                        "column_id": ["日付", "曜日"],
-                        "filter_query": f"{{曜日}} eq {WEEKDAYS[-2]}",
+                    {
+                        "if": {
+                            "column_id": ["日付", "曜日", "開始時刻", "終了時刻"],
+                            "filter_query": "{開始時刻} eq '' && {終了時刻} ne ''",
+                        },
+                        "backgroundColor": "tomato",
                     },
-                    "color": "blue",
-                },
-                {
-                    "if": {
-                        "column_id": ["日付", "曜日"],
-                        "filter_query": f"{{曜日}} eq {WEEKDAYS[-1]}",
+                    {
+                        "if": {
+                            "column_id": ["日付", "曜日", "開始時刻", "終了時刻"],
+                            "filter_query": "{開始時刻} ne '' && {終了時刻} ne '' && {勤務時間} <=0",
+                        },
+                        "backgroundColor": "red",
                     },
-                    "color": "red",
-                },
-                {
-                    "if": {
-                        "column_id": ["日付", "曜日"],
-                        "filter_query": f"{{曜日}} eq {HOLIDAY}",
+                    {
+                        "if": {
+                            "column_id": ["日付", "曜日"],
+                            "filter_query": f"{{曜日}} eq {WEEKDAYS[-2]}",
+                        },
+                        "color": "blue",
                     },
-                    "color": "red",
-                },
-            ],
-        ),
-    ]
-)
+                    {
+                        "if": {
+                            "column_id": ["日付", "曜日"],
+                            "filter_query": f"{{曜日}} eq {WEEKDAYS[-1]}",
+                        },
+                        "color": "red",
+                    },
+                    {
+                        "if": {
+                            "column_id": ["日付", "曜日"],
+                            "filter_query": f"{{曜日}} eq {HOLIDAY}",
+                        },
+                        "color": "red",
+                    },
+                ],
+            ),
+        ]
+    )
+
+
+app.layout = serve_layout
 
 
 @app.callback(Output("markdown-report", "children"), Input("textarea-report", "value"))
@@ -345,6 +366,8 @@ def updateReport2MD(value):
 )
 def updateReport(value, n_clicks, day):
     if n_clicks:
+        df = load_df()
+        data = list(df.to_dict("index").values())
         di = (
             datetime.strptime(day, DATE_FORMAT)
             - datetime(CURRENT_YEAR, CURRENT_MONTH, 1)
@@ -365,7 +388,7 @@ def save_data(data):
     Input("dropdown-days", "value"),  # day
     prevent_initial_call=True,
 )
-def dispayReportContent(day):
+def refreshReportContent(day):
     df = load_df()
     data = list(df.to_dict("index").values())
     di = (
@@ -377,7 +400,7 @@ def dispayReportContent(day):
 @app.callback(
     Output("save-notificaiton", "children"),
     Input("button-save", "n_clicks"),
-    Input("time-table", "data"),
+    Input("attendance-table", "data"),
     prevent_initial_call=True,
 )
 def saveData(n_clicks, data):
@@ -400,6 +423,7 @@ def format_datatable(data):
             d["終了時刻"] = EMPTY_VALUE
             d["勤務時間"] = EMPTY_VALUE
             d["残業時間"] = EMPTY_VALUE
+            d["休憩"] = EMPTY_VALUE
             continue
         try:
             break_time = d["休憩"]
@@ -431,13 +455,13 @@ def format_datatable(data):
 
 
 @app.callback(
-    Output("time-table", "data"),
+    Output("attendance-table", "data"),
     Output("summary-table", "data"),
-    Input("time-table", "active_cell"),
-    Input("time-table", "data_previous"),
-    Input("time-table", "data"),
+    Input("attendance-table", "active_cell"),
+    Input("attendance-table", "data_previous"),
+    Input("attendance-table", "data"),
 )
-def updateData(active_cell, data_previous, data):
+def editAttendanceBook(active_cell, data_previous, data):
     global active_cell_previous
     if active_cell_previous["column_id"] in ["開始時刻", "終了時刻"]:
         row = active_cell_previous["row"]
@@ -483,6 +507,7 @@ def updateData(active_cell, data_previous, data):
 
     # update active_cell_previous
     active_cell_previous = active_cell
+    save_data(data)
     return data, summary
 
 
