@@ -349,7 +349,15 @@ def serve_layout():
     )
 
 
-app.layout = serve_layout
+"""
+Note that please do not write as follow
+
+```python
+app.layout = serve_layout()
+```
+- See https://dash.plotly.com/live-updates
+"""
+app.layout = serve_layout  # This is intentionally designed
 
 
 @app.callback(Output("markdown-report", "children"), Input("textarea-report", "value"))
