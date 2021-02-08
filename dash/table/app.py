@@ -90,8 +90,6 @@ def load_df():
 
         df.to_json(BACKUP_FILE)
     else:
-        year_month = f"{CURRENT_YEAR}-{CURRENT_MONTH}-1"
-        year_next_month = f"{CURRENT_YEAR}-{CURRENT_MONTH+1}-1"
         data = []
         for d in CURRENT_DAYS:
             wd = HOLIDAY if is_holiday(d) else WEEKDAYS[d.weekday()]
