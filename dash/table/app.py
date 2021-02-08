@@ -22,10 +22,23 @@ HOLIDAY = "祝"
 EMPTY_VALUE = ""
 ACTIVE_CELL = {"row": 0, "column": 2, "column_id": "開始時刻"}
 CURRENT_YEAR_MONTH = datetime.today().strftime("%Y_%m")
+CURRENT_YEAR = int(datetime.today().strftime("%Y"))
+CURRENT_MONTH = int(datetime.today().strftime("%m"))
+
 ATTENDANCE_BOOK = (
-    f"{os.path.dirname(__file__)}/.data/{CURRENT_YEAR_MONTH}_attendance_book.json"
+    os.path.join(f"{os.path.dirname(__file__)}", ".data", f"{CURRENT_YEAR_MONTH}_attendance_book.json")
 )
-BACKUP_FILE = f"{os.path.dirname(__file__)}/.backup/{os.path.basename(ATTENDANCE_BOOK)}"
+BACKUP_FILE = (
+    os.path.join(f"{os.path.dirname(__file__)}", ".backup", f"{CURRENT_YEAR_MONTH}_attendance_book.json")
+)
+
+print(ATTENDANCE_BOOK)
+if not os.path.exists(os.path.dirname(ATTENDANCE_BOOK)):
+    os.makedirs(os.path.dirname(ATTENDANCE_BOOK))
+
+if not os.path.exists(os.path.dirname(BACKUP_FILE)):
+    os.makedirs(os.path.dirname(BACKUP_FILE))
+
 STANDARD_WORKING_TIME = 8
 WORKING_STATUS = [
     "勤務",
@@ -35,6 +48,15 @@ WORKING_STATUS = [
 ]
 
 # ----------------------------------------------------------------
+
+
+def is_holiday(d):
+    holidays = [d[0] for d in jpholiday.month_holidays(CURRENT_YEAR, CURRENT_MONTH)]
+    return d in holidays
+
+
+def is_dayoff(d):
+    return d.weekday() in DAYS_OFF_INDEX
 
 
 if os.path.exists(ATTENDANCE_BOOK):
@@ -47,15 +69,8 @@ else:
     y = datetime.today().year
     m = datetime.today().month
 
-    def is_holiday(d):
-        holidays = [d[0] for d in jpholiday.month_holidays(y, m)]
-        return d in holidays
-
-    def is_dayoff(d):
-        return d.weekday() in DAYS_OFF_INDEX
-
-    year_month = f"{y}-{m}-1"
-    year_next_month = f"{y}-{m+1}-1"
+    year_month = f"{CURRENT_YEAR}-{CURRENT_MONTH}-1"
+    year_next_month = f"{CURRENT_YEAR}-{CURRENT_MONTH+1}-1"
     dates = pd.to_datetime(pd.date_range(year_month, year_next_month)[:-1]).map(
         lambda d: d.to_pydatetime()
     )
@@ -304,7 +319,7 @@ def format_datatable(data):
             d["勤務時間"] = working_hours
             d["残業時間"] = max(working_hours - STANDARD_WORKING_TIME, 0)
             d["勤務状態"] = "勤務"
-        except ValueError:
+        except Exception as e:
             d["勤務時間"] = EMPTY_VALUE
             d["残業時間"] = EMPTY_VALUE
             dt = datetime.strptime(d["日付"], "%Y/%m/%d")
