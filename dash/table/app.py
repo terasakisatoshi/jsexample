@@ -3,19 +3,22 @@ import os
 from datetime import date, datetime
 
 import dash
+import dash_core_components as dcc
 import dash_table
-from dash_table.Format import Format, Group, Padding, Symbol
+from dash_table.Format import Format, Symbol
 import dash_html_components as html
 from dash.dependencies import Input, Output
-from numpy import isin, str_
+
 import pandas as pd
 import jpholiday
+
 
 # -----------------------CONSTANTS-----------------------------------------
 
 WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"]
 DAYS_OFF_INDEX = [5, 6]  # "土, 日"
 
+DATE_FORMAT = "%Y/%m/%d"
 UNREGISTERED = "未登録"
 DAYS_OFF = "休日"
 HOLIDAY = "祝"
@@ -24,15 +27,25 @@ ACTIVE_CELL = {"row": 0, "column": 2, "column_id": "開始時刻"}
 CURRENT_YEAR_MONTH = datetime.today().strftime("%Y_%m")
 CURRENT_YEAR = int(datetime.today().strftime("%Y"))
 CURRENT_MONTH = int(datetime.today().strftime("%m"))
+CURRENT_DAYS = pd.to_datetime(
+    pd.date_range(
+        datetime(CURRENT_YEAR, CURRENT_MONTH, 1),
+        datetime(CURRENT_YEAR, CURRENT_MONTH + 1, 1),
+    )[:-1]
+).map(lambda d: d.to_pydatetime())
 
-ATTENDANCE_BOOK = (
-    os.path.join(f"{os.path.dirname(__file__)}", ".data", f"{CURRENT_YEAR_MONTH}_attendance_book.json")
-)
-BACKUP_FILE = (
-    os.path.join(f"{os.path.dirname(__file__)}", ".backup", f"{CURRENT_YEAR_MONTH}_attendance_book.json")
+ATTENDANCE_BOOK = os.path.join(
+    f"{os.path.dirname(__file__)}",
+    ".data",
+    f"{CURRENT_YEAR_MONTH}_attendance_book.json",
 )
 
-print(ATTENDANCE_BOOK)
+BACKUP_FILE = os.path.join(
+    f"{os.path.dirname(__file__)}",
+    ".backup",
+    f"{CURRENT_YEAR_MONTH}_attendance_book.json",
+)
+
 if not os.path.exists(os.path.dirname(ATTENDANCE_BOOK)):
     os.makedirs(os.path.dirname(ATTENDANCE_BOOK))
 
@@ -47,8 +60,6 @@ WORKING_STATUS = [
     UNREGISTERED,
 ]
 
-# ----------------------------------------------------------------
-
 
 def is_holiday(d):
     holidays = [d[0] for d in jpholiday.month_holidays(CURRENT_YEAR, CURRENT_MONTH)]
@@ -59,41 +70,44 @@ def is_dayoff(d):
     return d.weekday() in DAYS_OFF_INDEX
 
 
-if os.path.exists(ATTENDANCE_BOOK):
-    df = pd.read_json(ATTENDANCE_BOOK)
-    # preprocess
-    df["日付"] = pd.to_datetime(df["日付"], format="%Y/%m/%d").dt.strftime("%Y/%m/%d")
+# ----------------------------------------------------------------
 
-    df.to_json(BACKUP_FILE)
-else:
-    y = datetime.today().year
-    m = datetime.today().month
 
-    year_month = f"{CURRENT_YEAR}-{CURRENT_MONTH}-1"
-    year_next_month = f"{CURRENT_YEAR}-{CURRENT_MONTH+1}-1"
-    dates = pd.to_datetime(pd.date_range(year_month, year_next_month)[:-1]).map(
-        lambda d: d.to_pydatetime()
-    )
-    data = []
-    for d in dates:
-        wd = HOLIDAY if is_holiday(d) else WEEKDAYS[d.weekday()]
-        ws = DAYS_OFF if (is_holiday(d) or is_dayoff(d)) else UNREGISTERED
-        data.append(
-            dict(
-                日付=d.strftime("%Y/%m/%d"),
-                曜日=wd,
-                勤務状態=ws,
-                開始時刻=EMPTY_VALUE,
-                終了時刻=EMPTY_VALUE,
-                休憩=EMPTY_VALUE,
-                勤務時間=EMPTY_VALUE,
-                残業時間=EMPTY_VALUE,
-                業務内容=EMPTY_VALUE,
+def load_df():
+    if os.path.exists(ATTENDANCE_BOOK):
+        df = pd.read_json(ATTENDANCE_BOOK)
+        # preprocess
+        df["日付"] = pd.to_datetime(df["日付"], format=DATE_FORMAT).dt.strftime(DATE_FORMAT)
+
+        df.to_json(BACKUP_FILE)
+    else:
+        year_month = f"{CURRENT_YEAR}-{CURRENT_MONTH}-1"
+        year_next_month = f"{CURRENT_YEAR}-{CURRENT_MONTH+1}-1"
+        data = []
+        for d in CURRENT_DAYS:
+            wd = HOLIDAY if is_holiday(d) else WEEKDAYS[d.weekday()]
+            ws = DAYS_OFF if (is_holiday(d) or is_dayoff(d)) else UNREGISTERED
+            data.append(
+                dict(
+                    日付=d.strftime(DATE_FORMAT),
+                    曜日=wd,
+                    勤務状態=ws,
+                    開始時刻=EMPTY_VALUE,
+                    終了時刻=EMPTY_VALUE,
+                    休憩=EMPTY_VALUE,
+                    勤務時間=EMPTY_VALUE,
+                    残業時間=EMPTY_VALUE,
+                    進捗報告=EMPTY_VALUE,
+                )
             )
-        )
-    df = pd.DataFrame(data)
+        df = pd.DataFrame(data)
+    return df
 
+
+df = load_df()
 data = list(df.to_dict("index").values())
+di = (datetime.today() - datetime(CURRENT_YEAR, CURRENT_MONTH, 1)).days
+today_mission = data[di]["進捗報告"]
 
 app = dash.Dash(__name__)
 
@@ -146,12 +160,13 @@ for col in df.columns:
                 "format": Format(symbol=Symbol.yes, symbol_suffix=" [h]"),
             }
         )
-    elif col in ["業務内容"]:
+    elif col in ["進捗報告"]:
         columns.append(
             {
                 "name": col,
                 "id": col,
                 "type": "text",
+                "presentation": "markdown",
             }
         )
     elif col in ["勤務状態"]:
@@ -170,8 +185,8 @@ for col in df.columns:
 app.layout = html.Div(
     children=[
         html.H1("Attendance Book"),
-        html.Button("Save", id="save-button"),
-        html.Div(EMPTY_VALUE, id="save-status"),
+        html.Button("Save", id="button-save"),
+        html.Div(EMPTY_VALUE, id="save-notificaiton"),
         html.H2("Summary"),
         dash_table.DataTable(
             id="summary-table",
@@ -208,6 +223,47 @@ app.layout = html.Div(
             ),
             data=[dict(合計勤務時間=EMPTY_VALUE, 合計残業時間=EMPTY_VALUE)],
         ),
+        html.H2("進捗報告"),
+        html.Div(
+            children=[
+                html.Div(id="intermediate-value", style={"display": "none"}),
+                html.Div(
+                    children=[
+                        dcc.Dropdown(
+                            id="dropdown-days",
+                            options=[
+                                {
+                                    "label": d.strftime(DATE_FORMAT),
+                                    "value": d.strftime(DATE_FORMAT),
+                                }
+                                for d in CURRENT_DAYS
+                            ],
+                            value=datetime.today().strftime(DATE_FORMAT),
+                        ),
+                        html.Button("Update", id="button-update"),
+                        html.Div(EMPTY_VALUE, id="update-notificaiton"),
+                        dcc.Textarea(
+                            id="textarea-report",
+                            placeholder="""本日の業務内容を入力してください．Markdown で書くことができます.\n画面右側に入力内容のプレビューが行われます.""",
+                            value=today_mission,
+                            style={
+                                "width": "95%",
+                                "height": 200,
+                            },
+                        ),
+                    ],
+                    style={
+                        "width": "49%",
+                        "display": "inline-block",
+                    },
+                ),
+                dcc.Markdown(
+                    id="markdown-report",
+                    children="""こちらに更新されます．""",
+                    style={"width": "49%", "height": 100, "display": "inline-block"},
+                ),
+            ]
+        ),
         html.H2("Table"),
         dash_table.DataTable(
             id="time-table",
@@ -215,6 +271,8 @@ app.layout = html.Div(
             columns=columns,
             data=data,
             active_cell=ACTIVE_CELL,
+            export_headers="display",
+            export_format="xlsx",
             style_header=dict(
                 backgroundColor="rgb(230, 230, 230)",
                 fontWeight="bold",
@@ -273,19 +331,59 @@ app.layout = html.Div(
 )
 
 
+@app.callback(Output("markdown-report", "children"), Input("textarea-report", "value"))
+def updateReport2MD(value):
+    return value
+
+
 @app.callback(
-    Output("save-status", "children"),
-    Input("save-button", "n_clicks"),
+    Output("update-notificaiton", "children"),
+    Input("markdown-report", "children"),
+    Input("button-update", "n_clicks"),
+    Input("dropdown-days", "value"),
+    prevent_initial_call=True,
+)
+def updateReport(value, n_clicks, day):
+    if n_clicks:
+        di = (
+            datetime.strptime(day, DATE_FORMAT)
+            - datetime(CURRENT_YEAR, CURRENT_MONTH, 1)
+        ).days
+        data[di]["進捗報告"] = value
+        msg = save_data(data)
+        return msg
+
+
+def save_data(data):
+    df = pd.DataFrame(data)
+    df.to_json(ATTENDANCE_BOOK)
+    return f"Saved data at {ATTENDANCE_BOOK}"
+
+
+@app.callback(
+    Output("textarea-report", "value"),  # report
+    Input("dropdown-days", "value"),  # day
+    prevent_initial_call=True,
+)
+def dispayReportContent(day):
+    df = load_df()
+    data = list(df.to_dict("index").values())
+    di = (
+        datetime.strptime(day, DATE_FORMAT) - datetime(CURRENT_YEAR, CURRENT_MONTH, 1)
+    ).days
+    return data[di]["進捗報告"]
+
+
+@app.callback(
+    Output("save-notificaiton", "children"),
+    Input("button-save", "n_clicks"),
     Input("time-table", "data"),
     prevent_initial_call=True,
 )
 def saveData(n_clicks, data):
     if n_clicks:
-        df = pd.DataFrame(data)
-        df.to_json(ATTENDANCE_BOOK)
-        return f"Saved data at {ATTENDANCE_BOOK}"
-    else:
-        return EMPTY_VALUE
+        msg = save_data(data)
+        return msg
 
 
 active_cell_previous = ACTIVE_CELL
@@ -294,7 +392,7 @@ active_cell_previous = ACTIVE_CELL
 def format_datatable(data):
     for d in data:
         if d["勤務状態"] in ["有給"]:
-            dt = datetime.strptime(d["日付"], "%Y/%m/%d")
+            dt = datetime.strptime(d["日付"], DATE_FORMAT)
             dt = date(dt.year, dt.month, dt.day)
             if is_holiday(dt) or is_dayoff(dt):
                 d["勤務状態"] = DAYS_OFF
@@ -319,10 +417,10 @@ def format_datatable(data):
             d["勤務時間"] = working_hours
             d["残業時間"] = max(working_hours - STANDARD_WORKING_TIME, 0)
             d["勤務状態"] = "勤務"
-        except Exception as e:
+        except ValueError:
             d["勤務時間"] = EMPTY_VALUE
             d["残業時間"] = EMPTY_VALUE
-            dt = datetime.strptime(d["日付"], "%Y/%m/%d")
+            dt = datetime.strptime(d["日付"], DATE_FORMAT)
             dt = date(dt.year, dt.month, dt.day)
             if is_holiday(dt) or is_dayoff(dt):
                 d["勤務状態"] = DAYS_OFF
@@ -369,6 +467,7 @@ def updateData(active_cell, data_previous, data):
             # revert data with `previous_data`
             if str_value:  # str_value is not empty
                 data[row][column_id] = data_previous[row][column_id]
+
     data = format_datatable(data)
 
     # update summary
@@ -384,7 +483,6 @@ def updateData(active_cell, data_previous, data):
 
     # update active_cell_previous
     active_cell_previous = active_cell
-
     return data, summary
 
 
