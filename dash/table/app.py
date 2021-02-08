@@ -84,11 +84,10 @@ def is_dayoff(d):
 
 def load_df():
     if os.path.exists(ATTENDANCE_BOOK):
+        print("load")
         df = pd.read_json(ATTENDANCE_BOOK)
         # preprocess
         df["日付"] = pd.to_datetime(df["日付"], format=DATE_FORMAT).dt.strftime(DATE_FORMAT)
-
-        df.to_json(BACKUP_FILE)
     else:
         data = []
         for d in CURRENT_DAYS:
@@ -111,6 +110,12 @@ def load_df():
     return df
 
 
+def create_backup():
+    df = load_df()
+    df.to_json(BACKUP_FILE)
+
+
+create_backup()
 app = dash.Dash(__name__)
 
 
