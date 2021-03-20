@@ -1,0 +1,38 @@
+body {
+    background-color:#f6f7c1;
+}
+
+h1 {
+    text-align: center;
+}
+
+hr {
+    border: none;
+    border-top: 3px double #333;
+    border-color: gray;
+    border-top-style: dotted;
+    border-width: 8px;
+    overflow: visible;
+    text-align: center;
+    height: 0px;
+    width: 10%;
+}
+
+table {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+thead, tfoot {
+    background-color: #3f87a6;
+    color: #fff;
+}
+
+tbody {
+    background-color: #e4f0f5;
+}
+
+td {
+  text-align: center;
+  border: 1px solid #333;
+}
