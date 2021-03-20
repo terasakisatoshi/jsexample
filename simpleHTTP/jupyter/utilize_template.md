@@ -5,7 +5,7 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.2'
-      jupytext_version: 1.4.2
+      jupytext_version: 1.6.0
   kernelspec:
     display_name: Python 3
     language: python
@@ -150,7 +150,7 @@ html = template.format(
 )
 ```
 
-ただし，このままだとフィールド(`title`, `header`, `paragraph` などのこと) はハードコーディングされていて制御できない.
+ただし，このままだとフィールド(`title`, `header1`, `paragraph` などのこと) を指定する値はハードコーディングされていて制御できない.
 そこでクエリーパラメータを用いてHTMLの出力を制御する方針をとる.
 <!-- #endregion -->
 
@@ -210,6 +210,7 @@ def do(title, header1, paragraph):
     display(HTML(f"""
     <iframe src="http://localhost:{port}/template.html?title={title}&header1={header1}&paragraph={paragraph}" width="800" height="200"></iframe>
     """))
+    
     
 interact(do, title=title, header1=header1, paragraph=paragraph)
 ```
