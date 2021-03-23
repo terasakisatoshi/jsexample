@@ -17,7 +17,7 @@ jupyter:
 Webアプリを動かす際ににターミナルを開いてサーバーを立ち上げるスクリプトを呼び出すでしょ？あれってめんどくさくない？ それを管理するための領域を画面に占めたくない．Jupyter 上でサーバーの立ち上げをコントロールさせればいいのでは？なるほど．そんなあなたにこのノートブックを授けよう．
 
 
-# References:
+# Reference:
 
 - 
 掌田 津耶乃 著 [Pythonフレームワーク
@@ -85,9 +85,9 @@ display(HTML(
 
 ```python
 # Import modules
-from http.server import SimpleHTTPRequestHandler, HTTPServer
-import random
-import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from multiprocessing import Process
+proc = None # 以降のセルでプロセスを指す識別子として活用する
 ```
 
 ```python
