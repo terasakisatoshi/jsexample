@@ -10,4 +10,5 @@ services:
     working_dir: /work
     ports:
       - "8888:8888"
+      - "3000:3000"
     command: jupyter lab --notebook-dir /work --ip=0.0.0.0 --allow-root

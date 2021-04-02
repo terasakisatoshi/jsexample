@@ -23,6 +23,11 @@ def form():
     )
 
 
+@app.route("/<user>/<message>", methods=["GET"])
+def index2(user, message):
+    return render_template("index.html", title="title", message=f"{user} sent {message}")
+
+
 def main():
     app.debug = True
     app.run(host="localhost")

@@ -3,20 +3,21 @@ FROM ubuntu:20.04
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUn apt-get update && apt-get install -y \
-	python3 \
-	python3-pip \
-	curl \
-	&& apt-get clean && rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*
+    python3 \
+    python3-pip \
+    curl \
+    && apt-get clean && rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*
 
 # install NodeJS
 RUN apt-get update && \
-	curl -sL https://deb.nodesource.com/setup_14.x | bash - && \
-	apt-get install -y nodejs && \
+    curl -sL https://deb.nodesource.com/setup_14.x | bash - && \
+    apt-get install -y nodejs && \
     apt-get clean && rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*
 
 RUN pip3 install jupyter jupyterlab jupytext
 
 RUN jupyter labextension install @hokyjack/jupyterlab-monokai-plus --no-build && \
+    jupyter labextension install @z-m-k/jupyterlab_sublime --no-build && \
     jupyter lab build -y && \
     jupyter lab clean -y && \
     npm cache clean --force && \
