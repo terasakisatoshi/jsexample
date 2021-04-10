@@ -19,10 +19,13 @@
 	</div>
 	<script type="text/babel">
 		let dom = document.querySelector("#root")
+		let x = 1;
+		let y = 2;
 		let element = (
 			<div>
 				<h1>Goma</h1>
 				<h2>Kyu</h2>
+				<p>{x+y}</p>
 			</div>
 		)
 		ReactDOM.render(element, dom);
