@@ -4,7 +4,6 @@ const ejs = require("ejs");
 const url = require("url");
 const qs = require("querystring");
 const index_page = fs.readFileSync("index.ejs", "utf8");
-const style_css = fs.readFileSync("./styles.css", "utf8");
 const other_page = fs.readFileSync("./other.ejs", "utf8");
 let server = http.createServer(getFromClient);
 
